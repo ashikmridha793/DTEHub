@@ -4,14 +4,15 @@ import { useAuthContext } from '../context/AuthContext';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../firebase';
 import CustomSelect from '../components/CustomSelect';
-import IframeModal from '../components/IframeModal';
+import ResourceWindowManager, { loadWorkspace, saveWorkspace } from '../components/ResourceWindowManager';
 import './Notes.css';
 
 export default function Notes() {
     const { user, addRecentlyViewed, addDownload, toggleFavorite, isFavorited, addSearchQuery, preferences, updatePreferences } = useAuthContext();
     const [notesData, setNotesData] = useState([]);
     const [loadingNotes, setLoadingNotes] = useState(true);
-    const [viewUrl, setViewUrl] = useState(null);
+    const [openWindows, setOpenWindows] = useState(() => loadWorkspace());
+    const [nextZ, setNextZ] = useState(10);
     const [currentFolder, setCurrentFolder] = useState(null);
 
     // Dynamic Filter Lists
@@ -24,6 +25,7 @@ export default function Notes() {
     const [selSemester, setSelSemester] = useState(preferences?.semester || '');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('newest');
+    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
     // Sync local state when preferences load
     useEffect(() => {
@@ -34,11 +36,13 @@ export default function Notes() {
         }
     }, [preferences]);
 
+    // Persist workspace to localStorage on every change
+    useEffect(() => { saveWorkspace(openWindows); }, [openWindows]);
+
     // Fetch master data for filters
     useEffect(() => {
         const bRef = ref(database, 'branches');
         const sRef = ref(database, 'syllabuses');
-
         onValue(bRef, (snap) => {
             const data = snap.val();
             if (data) {
@@ -49,7 +53,6 @@ export default function Notes() {
                 setBranches(arr);
             }
         });
-
         onValue(sRef, (snap) => {
             const data = snap.val();
             if (data) {
@@ -68,68 +71,78 @@ export default function Notes() {
         const unsubscribe = onValue(notesRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                const arr = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
-                // Sort by timestamp if needed
+                const arr = Object.keys(data).map(key => ({ id: key, ...data[key] }));
                 setNotesData(arr.reverse());
             } else {
                 setNotesData([]);
             }
             setLoadingNotes(false);
         });
-
         return () => unsubscribe();
     }, []);
 
+    // ── Window management ────────────────────────────
+    const openWindow = (note) => {
+        setOpenWindows(prev => {
+            const existing = prev.find(w => w.id === note.id);
+            if (existing) {
+                return prev.map(w => w.id === note.id ? { ...w, state: 'normal', zOrder: nextZ } : w);
+            }
+            // Stagger: 1st left, 2nd right, 3rd+ cascade from top-left
+            const idx = prev.length % 5;
+            const vw = window.innerWidth;
+            const ww = Math.min(640, vw * 0.48);
+            const x = idx === 0 ? 16 : idx === 1 ? Math.floor(vw / 2) + 4 : 16 + idx * 40;
+            const y = 40 + idx * 28;
+            return [...prev, { id: note.id, url: note.url, title: note.title, state: 'normal', x, y, width: ww, height: 520, zOrder: nextZ }];
+        });
+        setNextZ(n => n + 1);
+    };
+
+    const handleWindowClose = (id) => setOpenWindows(prev => prev.filter(w => w.id !== id));
+    const handleWindowMinimize = (id, mode) => {
+        if (mode === 'restore') {
+            setOpenWindows(prev => prev.map(w => w.id === id ? { ...w, state: 'normal', zOrder: nextZ } : w));
+            setNextZ(n => n + 1);
+        } else {
+            setOpenWindows(prev => prev.map(w => w.id === id ? { ...w, state: 'minimized' } : w));
+        }
+    };
+    const handleWindowMaximize = (id) => setOpenWindows(prev => prev.map(w =>
+        w.id === id ? { ...w, state: w.state === 'maximized' ? 'normal' : 'maximized' } : w
+    ));
+    const handleWindowFocus = (id) => {
+        setNextZ(n => n + 1);
+        setOpenWindows(prev => prev.map(w => w.id === id ? { ...w, zOrder: nextZ } : w));
+    };
+    const handleWindowMove = (id, x, y) => setOpenWindows(prev => prev.map(w => w.id === id ? { ...w, x, y } : w));
+    const handleWindowResize = (id, width, height) => setOpenWindows(prev => prev.map(w => w.id === id ? { ...w, width, height } : w));
+
+    // ── Resource actions ─────────────────────────────
     const handleView = (note) => {
-        if (note.isFolder) {
-            setCurrentFolder(note);
-            return;
-        }
+        if (note.isFolder) { setCurrentFolder(note); return; }
         if (user) {
-            addRecentlyViewed({
-                itemId: note.id,
-                type: 'note',
-                title: note.title,
-                chapter: note.chapter,
-            });
+            addRecentlyViewed({ itemId: note.id, type: 'note', title: note.title, chapter: note.chapter });
         }
+        openWindow(note);
     };
 
     const handleDownload = (note) => {
         if (!note.url) return;
-
-        // Convert to download link if it's a direct file
         let downloadLink = note.url;
         if (note.url.includes('drive.google.com/file/d/')) {
             const fileId = note.url.split('/d/')[1]?.split('/')[0];
-            if (fileId) {
-                downloadLink = `https://drive.google.com/uc?id=${fileId}&export=download`;
-            }
+            if (fileId) downloadLink = `https://drive.google.com/uc?id=${fileId}&export=download`;
         }
-
         if (user) {
-            addDownload({
-                itemId: note.id,
-                type: 'note',
-                title: note.title,
-                chapter: note.chapter,
-            });
+            addDownload({ itemId: note.id, type: 'note', title: note.title, chapter: note.chapter });
         }
-
         window.open(downloadLink, '_blank');
     };
 
     const handleFavorite = (note) => {
         if (user) {
-            toggleFavorite({
-                itemId: note.id,
-                type: 'note',
-                title: note.title,
-                chapter: note.chapter,
-            });
+            toggleFavorite({ itemId: note.id, type: 'note', title: note.title, chapter: note.chapter });
         }
     };
 
@@ -137,37 +150,25 @@ export default function Notes() {
         if (type === 'branch') setSelBranch(value);
         if (type === 'syllabus') setSelSyllabus(value);
         if (type === 'semester') setSelSemester(value);
-
-        if (user) {
-            updatePreferences({ [type]: value });
-        }
+        if (user) updatePreferences({ [type]: value });
     };
 
     const handleSearch = (e) => {
         const query = e.target.value;
         setSearchQuery(query);
-        if (e.key === 'Enter' && user && query.trim()) {
-            addSearchQuery(query);
-        }
+        if (e.key === 'Enter' && user && query.trim()) addSearchQuery(query);
     };
 
     const filteredNotes = notesData
         .filter(note => {
-            // Folder hierarchy check
             const matchesFolder = (currentFolder?.id || 'root') === (note.parentId || 'root');
-
-            // Search filter
             const matchesSearch = !searchQuery ||
                 note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (note.chapter && note.chapter.toLowerCase().includes(searchQuery.toLowerCase()));
-
             if (note.isFolder) return matchesFolder && matchesSearch;
-
-            // Unified filters from workspace header
             const matchesBranch = !selBranch || note.branch === selBranch || note.branch === 'Common';
             const matchesSyllabus = !selSyllabus || note.syllabus === selSyllabus;
             const matchesSemester = !selSemester || note.semester === selSemester;
-
             return matchesFolder && matchesBranch && matchesSyllabus && matchesSemester && matchesSearch;
         })
         .sort((a, b) => {
@@ -178,11 +179,9 @@ export default function Notes() {
             return 0;
         });
 
-    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-
     return (
         <div className="notes-page-wrapper">
-            {/* Centered Search Bar - full viewport width */}
+            {/* Centered Search Bar */}
             <div className="notes-search-center">
                 <div className="workspace-selectors search-only-global">
                     <div className="selectors-body">
@@ -201,7 +200,6 @@ export default function Notes() {
                                     icon={Filter}
                                 />
                             </div>
-
                             <div className="selector-item">
                                 <label>Syllabus Scheme</label>
                                 <CustomSelect
@@ -215,7 +213,6 @@ export default function Notes() {
                                     icon={Filter}
                                 />
                             </div>
-
                             <div className="selector-item">
                                 <label>Target Semester</label>
                                 <CustomSelect
@@ -234,7 +231,6 @@ export default function Notes() {
                                     icon={Filter}
                                 />
                             </div>
-
                             <div className="selector-item">
                                 <label>Sort By</label>
                                 <CustomSelect
@@ -251,7 +247,6 @@ export default function Notes() {
                                 />
                             </div>
                         </div>
-
                         <div className="search-bar-modern">
                             <Search className="search-icon" size={18} />
                             <input
@@ -269,18 +264,14 @@ export default function Notes() {
             {/* Left-aligned content container */}
             <div className="container notes-page">
 
-                {/* Unified Filter FAB — sits above Workspace Dock */}
+                {/* Unified Filter FAB */}
                 <div className="global-filter-dock">
-                    <button
-                        className="dock-btn filter-fab"
-                        onClick={() => setIsFilterModalOpen(true)}
-                        title="Filters & Sorting"
-                    >
+                    <button className="dock-btn filter-fab" onClick={() => setIsFilterModalOpen(true)} title="Filters & Sorting">
                         <Filter size={24} />
                     </button>
                 </div>
 
-                {/* Mobile Filter Popup Modal */}
+                {/* Mobile Filter Modal */}
                 {isFilterModalOpen && (
                     <div className="filter-modal-overlay" onClick={() => setIsFilterModalOpen(false)}>
                         <div className="filter-modal-content card" onClick={e => e.stopPropagation()}>
@@ -292,66 +283,32 @@ export default function Notes() {
                                 <div className="selector-item">
                                     <label>Academic Branch</label>
                                     <CustomSelect
-                                        options={[
-                                            { value: '', label: 'Select Branch' },
-                                            { value: 'Common', label: 'Common to All' },
-                                            ...branches.map(b => ({ value: b.title, label: b.title }))
-                                        ]}
-                                        value={selBranch}
-                                        onChange={val => handlePreferenceChange('branch', val)}
-                                        placeholder="Select Branch"
+                                        options={[{ value: '', label: 'Select Branch' }, { value: 'Common', label: 'Common to All' }, ...branches.map(b => ({ value: b.title, label: b.title }))]}
+                                        value={selBranch} onChange={val => handlePreferenceChange('branch', val)} placeholder="Select Branch"
                                     />
                                 </div>
-
                                 <div className="selector-item">
                                     <label>Syllabus Scheme</label>
                                     <CustomSelect
-                                        options={[
-                                            { value: '', label: 'Select Scheme' },
-                                            ...syllabuses.map(s => ({ value: s.title, label: `${s.title} Scheme` }))
-                                        ]}
-                                        value={selSyllabus}
-                                        onChange={val => handlePreferenceChange('syllabus', val)}
-                                        placeholder="Select Scheme"
+                                        options={[{ value: '', label: 'Select Scheme' }, ...syllabuses.map(s => ({ value: s.title, label: `${s.title} Scheme` }))]}
+                                        value={selSyllabus} onChange={val => handlePreferenceChange('syllabus', val)} placeholder="Select Scheme"
                                     />
                                 </div>
-
                                 <div className="selector-item">
                                     <label>Target Semester</label>
                                     <CustomSelect
-                                        options={[
-                                            { value: '', label: 'Select Sem' },
-                                            { value: '1st Sem', label: '1st Semester' },
-                                            { value: '2nd Sem', label: '2nd Semester' },
-                                            { value: '3rd Sem', label: '3rd Semester' },
-                                            { value: '4th Sem', label: '4th Semester' },
-                                            { value: '5th Sem', label: '5th Semester' },
-                                            { value: '6th Sem', label: '6th Semester' }
-                                        ]}
-                                        value={selSemester}
-                                        onChange={val => handlePreferenceChange('semester', val)}
-                                        placeholder="Select Sem"
+                                        options={[{ value: '', label: 'Select Sem' }, { value: '1st Sem', label: '1st Semester' }, { value: '2nd Sem', label: '2nd Semester' }, { value: '3rd Sem', label: '3rd Semester' }, { value: '4th Sem', label: '4th Semester' }, { value: '5th Sem', label: '5th Semester' }, { value: '6th Sem', label: '6th Semester' }]}
+                                        value={selSemester} onChange={val => handlePreferenceChange('semester', val)} placeholder="Select Sem"
                                     />
                                 </div>
-
                                 <div className="selector-item">
                                     <label>Sort By</label>
                                     <CustomSelect
-                                        options={[
-                                            { value: 'newest', label: 'Newest First' },
-                                            { value: 'oldest', label: 'Oldest First' },
-                                            { value: 'az', label: 'Alphabetical (A-Z)' },
-                                            { value: 'za', label: 'Alphabetical (Z-A)' }
-                                        ]}
-                                        value={sortBy}
-                                        onChange={setSortBy}
-                                        placeholder="Sort By"
+                                        options={[{ value: 'newest', label: 'Newest First' }, { value: 'oldest', label: 'Oldest First' }, { value: 'az', label: 'Alphabetical (A-Z)' }, { value: 'za', label: 'Alphabetical (Z-A)' }]}
+                                        value={sortBy} onChange={setSortBy} placeholder="Sort By"
                                     />
                                 </div>
-
-                                <button className="btn-primary w-full" style={{ marginTop: '1.5rem' }} onClick={() => setIsFilterModalOpen(false)}>
-                                    Apply Filters
-                                </button>
+                                <button className="btn-primary w-full" style={{ marginTop: '1.5rem' }} onClick={() => setIsFilterModalOpen(false)}>Apply Filters</button>
                             </div>
                         </div>
                     </div>
@@ -359,10 +316,7 @@ export default function Notes() {
 
                 {/* Breadcrumbs */}
                 <div className="breadcrumbs" style={{ margin: '1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                    <span
-                        onClick={() => setCurrentFolder(null)}
-                        style={{ cursor: 'pointer', color: !currentFolder ? 'var(--accent-color)' : 'inherit', fontWeight: !currentFolder ? '600' : '400' }}
-                    >
+                    <span onClick={() => setCurrentFolder(null)} style={{ cursor: 'pointer', color: !currentFolder ? 'var(--accent-color)' : 'inherit', fontWeight: !currentFolder ? '600' : '400' }}>
                         All Resources
                     </span>
                     {currentFolder && (
@@ -400,7 +354,6 @@ export default function Notes() {
                                         </div>
                                     )}
                                 </div>
-
                                 {!note.isFolder && (
                                     <div className="folder-actions-overlay">
                                         <div className="action-button-group">
@@ -411,23 +364,14 @@ export default function Notes() {
                                             >
                                                 {isFavorited(note.id, 'note') ? <Heart size={20} fill="white" /> : <Plus size={20} />}
                                             </button>
-                                            <button
-                                                className="circle-action-btn btn-view"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleView(note);
-                                                    setViewUrl(note.url);
-                                                }}
+                                            <button className="circle-action-btn btn-view"
+                                                onClick={(e) => { e.stopPropagation(); handleView(note); }}
                                                 title="Quick View"
                                             >
                                                 <Eye size={20} />
                                             </button>
-                                            <button
-                                                className="circle-action-btn btn-download"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDownload(note);
-                                                }}
+                                            <button className="circle-action-btn btn-download"
+                                                onClick={(e) => { e.stopPropagation(); handleDownload(note); }}
                                                 title="Download"
                                             >
                                                 <Download size={20} />
@@ -446,8 +390,16 @@ export default function Notes() {
                     </div>
                 )}
 
-                {/* In-page Document Viewer */}
-                {viewUrl && <IframeModal url={viewUrl} onClose={() => setViewUrl(null)} />}
+                {/* Multi-Window Resource Viewer */}
+                <ResourceWindowManager
+                    windows={openWindows}
+                    onClose={handleWindowClose}
+                    onMinimize={handleWindowMinimize}
+                    onMaximize={handleWindowMaximize}
+                    onFocus={handleWindowFocus}
+                    onMove={handleWindowMove}
+                    onResize={handleWindowResize}
+                />
             </div>
         </div>
     );

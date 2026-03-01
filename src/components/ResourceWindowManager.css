@@ -1,0 +1,276 @@
+/* ═══════════════════════════════════════════════════
+   Resource Window Manager — Draggable, Floating
+   ═══════════════════════════════════════════════════ */
+
+/* Stage — non-blocking overlay, pointer events on children only */
+.rwm-stage {
+    position: fixed;
+    inset: 0;
+    z-index: 4001;
+    pointer-events: none;
+}
+
+/* ── Individual Window ───────────────────────────── */
+.rwm-window {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    background: #13131a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    overflow: hidden;
+    pointer-events: all;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    animation: rwmAppear 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: box-shadow 0.15s;
+    min-width: 300px;
+    min-height: 200px;
+}
+
+.rwm-window:focus-within,
+.rwm-window.is-dragging {
+    box-shadow:
+        0 28px 80px rgba(0, 0, 0, 0.75),
+        0 0 0 1.5px var(--accent-color),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    z-index: 4100 !important;
+}
+
+@keyframes rwmAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Maximized — override inline position */
+.rwm-window.mode-maximized {
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+    z-index: 4500 !important;
+    animation: none;
+}
+
+/* ── Title Bar ───────────────────────────────────── */
+.rwm-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 0.8rem;
+    background: #1e1e28;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    flex-shrink: 0;
+    gap: 0.5rem;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+}
+
+.rwm-titlebar:active {
+    cursor: grabbing;
+}
+
+.rwm-titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.rwm-titlebar-left svg {
+    flex-shrink: 0;
+    color: var(--accent-color);
+    opacity: 0.85;
+}
+
+.rwm-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+}
+
+.rwm-titlebar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.rwm-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    pointer-events: all;
+}
+
+.rwm-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-main);
+}
+
+.rwm-btn.close:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.rwm-btn.maximize:hover {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+}
+
+.rwm-btn.minimize:hover {
+    background: rgba(250, 204, 21, 0.15);
+    color: #facc15;
+}
+
+/* ── Iframe Body ─────────────────────────────────── */
+.rwm-body {
+    flex: 1;
+    overflow: hidden;
+    background: #0a0a0f;
+    position: relative;
+}
+
+.rwm-body iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* ── Resize handle ───────────────────────────────── */
+.rwm-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 16px;
+    height: 16px;
+    cursor: se-resize;
+    z-index: 10;
+    opacity: 0.3;
+    transition: opacity 0.2s;
+    background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.5) 50%);
+    border-radius: 0 0 10px 0;
+}
+
+.rwm-window:hover .rwm-resize {
+    opacity: 0.6;
+}
+
+/* ── Minimized Taskbar ───────────────────────────── */
+.rwm-taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.65rem;
+    background: rgba(18, 18, 26, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 -6px 28px rgba(0, 0, 0, 0.45);
+    pointer-events: all;
+    animation: rwmTaskbarIn 0.22s ease;
+}
+
+@keyframes rwmTaskbarIn {
+    from {
+        transform: translateX(-50%) translateY(100%);
+    }
+
+    to {
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.rwm-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.65rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.18s;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    font-weight: 600;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rwm-pill:hover {
+    background: rgba(253, 224, 71, 0.1);
+    border-color: rgba(253, 224, 71, 0.3);
+    color: var(--accent-color);
+}
+
+.rwm-pill svg {
+    flex-shrink: 0;
+}
+
+.rwm-pill-close {
+    flex-shrink: 0;
+    margin-left: 0.25rem;
+    opacity: 0.4;
+    line-height: 0;
+    border-radius: 4px;
+    padding: 2px;
+    cursor: pointer;
+}
+
+.rwm-pill-close:hover {
+    opacity: 1;
+    color: #ef4444;
+}
+
+/* ── Mobile ──────────────────────────────────────── */
+@media (max-width: 768px) {
+    .rwm-window:not(.mode-maximized) {
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        border-radius: 0 !important;
+        border: none !important;
+    }
+
+    /* Hide second window on mobile — goes to taskbar */
+    .rwm-window:not(.mode-maximized):nth-of-type(n+2) {
+        display: none;
+    }
+
+    .rwm-taskbar {
+        bottom: 60px;
+    }
+}
