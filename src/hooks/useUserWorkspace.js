@@ -18,6 +18,7 @@ export function useUserWorkspace(user) {
     downloads: [],
     searchHistory: [],
     favorites: [],
+    preferences: { branch: '', syllabus: '', semester: '' }
   });
   const [loading, setLoading] = useState(true);
 
@@ -49,6 +50,7 @@ export function useUserWorkspace(user) {
           downloads: toArray(data.downloads),
           searchHistory: toArray(data.searchHistory),
           favorites: toArray(data.favorites),
+          preferences: data.preferences || { branch: '', syllabus: '', semester: '' }
         });
         setLoading(false);
       },
@@ -131,6 +133,19 @@ export function useUserWorkspace(user) {
     [workspace.favorites]
   );
 
+  const updatePreferences = useCallback(
+    async (newPrefs) => {
+      if (!basePath) return;
+      const prefRef = ref(database, `${basePath}/preferences`);
+      await set(prefRef, {
+        ...workspace.preferences,
+        ...newPrefs,
+        lastUpdated: serverTimestamp()
+      });
+    },
+    [basePath, workspace.preferences]
+  );
+
   return {
     workspace,
     loading,
@@ -139,5 +154,7 @@ export function useUserWorkspace(user) {
     addSearchQuery,
     toggleFavorite,
     isFavorited,
+    updatePreferences,
+    preferences: workspace.preferences
   };
 }

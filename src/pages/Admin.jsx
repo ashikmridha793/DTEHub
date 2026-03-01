@@ -491,16 +491,19 @@ export default function Admin() {
         }
     };
 
-    const handleDelete = async (id) => {
-        const res = resources.find(r => r.id === id);
-        if (window.confirm("Delete this resource?")) {
+    const handleDelete = async (resourceId) => {
+        const res = resources.find(r => r.id === resourceId);
+        const typeLabel = res?.isFolder ? "folder" : "resource";
+        
+        if (window.confirm(`Are you sure you want to delete this ${typeLabel}?`)) {
             try {
-                await remove(ref(database, `resources/${activeTab}/${id}`));
+                await remove(ref(database, `resources/${activeTab}/${resourceId}`));
                 const statsRef = ref(database, 'stats/totalResources');
                 runTransaction(statsRef, (count) => Math.max(0, (count || 0) - 1));
-                logAdminAction('Deleted Resource', activeTab, res?.title || id);
+                logAdminAction(`Deleted ${typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)}`, activeTab, res?.title || resourceId);
             } catch (err) {
                 console.error("Delete failed", err);
+                alert("Permission denied or server error.");
             }
         }
     };
@@ -939,10 +942,10 @@ export default function Admin() {
                                             <p>{folder.branch} • {folder.syllabus || folder.academicYear || 'No Year'} {folder.semester ? `• ${folder.semester}` : ''}</p>
                                         </div>
                                         <div className="folder-actions-overlay">
-                                            <button className="mini-action-btn" onClick={(e) => { e.stopPropagation(); handleEdit(folder); }} title="Edit">
+                                            <button type="button" className="mini-action-btn" onClick={(e) => { e.stopPropagation(); handleEdit(folder); }} title="Edit">
                                                 <Edit2 size={14} />
                                             </button>
-                                            <button className="mini-action-btn delete" onClick={(e) => { e.stopPropagation(); handleDelete(folder.id); }} title="Delete">
+                                            <button type="button" className="mini-action-btn delete" onClick={(e) => { e.stopPropagation(); handleDelete(folder.id); }} title="Delete">
                                                 <Trash2 size={14} />
                                             </button>
                                         </div>
