@@ -33,7 +33,35 @@ export function useAuth() {
         if (firebaseUser) {
           // Set user immediately so protected routes work right away
           setUser(firebaseUser);
-          // ... rest of logic stays same
+          // Update user profile in Realtime Database in the background
+          // These operations should NOT block auth state resolution
+          try {
+            const userRef = ref(database, `users/${firebaseUser.uid}`);
+            const snapshot = await get(userRef);
+            const existingData = snapshot.val() || {};
+
+            // If it's a new user, increment the global verified users counter
+            if (!existingData.createdAt) {
+              const statsRef = ref(database, 'stats/totalVerifiedUsers');
+              runTransaction(statsRef, (count) => {
+                return (count || 0) + 1;
+              }).catch(err => console.error('DTEHub Auth: Verification metric error:', err));
+            }
+
+            await set(userRef, {
+              ...existingData,
+              uid: firebaseUser.uid,
+              displayName: firebaseUser.displayName,
+              email: firebaseUser.email,
+              photoURL: firebaseUser.photoURL,
+              emailVerified: firebaseUser.emailVerified || false,
+              lastLoginAt: serverTimestamp(),
+              ...(existingData.createdAt ? {} : { createdAt: serverTimestamp() }),
+            });
+          } catch (dbError) {
+            // Database write errors should NOT block user from accessing the app
+            console.error('DTEHub Auth: Profile sync anomaly:', dbError);
+          }
         } else {
           setUser(null);
         }
