@@ -47,7 +47,7 @@ const mockPieData = [
 
 export default function Admin() {
     const navigate = useNavigate();
-    const { user, loading, logout } = useAuthContext();
+    const { user, loading, loginWithGoogle, logout } = useAuthContext();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [showFolderModal, setShowFolderModal] = useState(false);
@@ -309,7 +309,20 @@ export default function Admin() {
 
     if (loading) return <div className="container flex-center" style={{ minHeight: '50vh' }}><div className="loader"></div></div>;
 
-    if (!user || !ADMIN_EMAILS.includes(user.email)) {
+    if (!user) {
+        return (
+            <div className="container flex-center" style={{ minHeight: '60vh', flexDirection: 'column', gap: '1.5rem' }}>
+                <ShieldCheck size={48} style={{ color: 'var(--accent-color)', opacity: 0.7 }} />
+                <h2>Admin Authentication Required</h2>
+                <p style={{ color: 'var(--text-muted)' }}>Please sign in with an authorized admin account to continue.</p>
+                <button className="btn-primary" onClick={loginWithGoogle} style={{ marginTop: '0.5rem' }}>
+                    Sign In with Google
+                </button>
+            </div>
+        );
+    }
+
+    if (!ADMIN_EMAILS.includes(user.email)) {
         return (
             <div className="container" style={{ paddingTop: '5rem', textAlign: 'center' }}>
                 <h2>Access Denied</h2>
