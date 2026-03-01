@@ -4,7 +4,7 @@ import { useAuthContext } from '../context/AuthContext';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../firebase';
 import CustomSelect from '../components/CustomSelect';
-import IframeModal from '../components/IframeModal';
+import ResourceWindowManager, { loadWorkspace, saveWorkspace } from '../components/ResourceWindowManager';
 import { Filter, ChevronDown } from 'lucide-react';
 import './Notes.css';
 
@@ -12,7 +12,8 @@ export default function DCET() {
     const { user, addRecentlyViewed, addDownload, toggleFavorite, isFavorited, addSearchQuery } = useAuthContext();
     const [dcetData, setDcetData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [viewUrl, setViewUrl] = useState(null);
+    const [openWindows, setOpenWindows] = useState(() => loadWorkspace());
+    const [nextZ, setNextZ] = useState(10);
     const [currentFolder, setCurrentFolder] = useState(null);
 
     // Dynamic Filter Lists
@@ -74,6 +75,26 @@ export default function DCET() {
         return () => unsubscribe();
     }, []);
 
+    // Persist workspace to localStorage on every change
+    useEffect(() => { saveWorkspace(openWindows); }, [openWindows]);
+
+    const openWindow = (item) => {
+        setOpenWindows(prev => {
+            const existing = prev.find(w => w.id === item.id);
+            if (existing) {
+                return prev.map(w => w.id === item.id ? { ...w, state: 'normal', zOrder: nextZ } : w);
+            }
+            // Stagger: 1st left, 2nd right, 3rd+ cascade from top-left
+            const idx = prev.length % 5;
+            const vw = window.innerWidth;
+            const ww = Math.min(640, vw * 0.48);
+            const x = idx === 0 ? 16 : idx === 1 ? Math.floor(vw / 2) + 4 : 16 + idx * 40;
+            const y = 40 + idx * 28;
+            return [...prev, { id: item.id, url: item.url, title: item.title, state: 'normal', x, y, width: ww, height: 520, zOrder: nextZ }];
+        });
+        setNextZ(n => n + 1);
+    };
+
     const handleView = (item) => {
         if (item.isFolder) {
             setCurrentFolder(item);
@@ -86,7 +107,27 @@ export default function DCET() {
                 title: item.title,
             });
         }
+        openWindow(item);
     };
+
+    const handleWindowClose = (id) => setOpenWindows(prev => prev.filter(w => w.id !== id));
+    const handleWindowMinimize = (id, mode) => {
+        if (mode === 'restore') {
+            setOpenWindows(prev => prev.map(w => w.id === id ? { ...w, state: 'normal', zOrder: nextZ } : w));
+            setNextZ(n => n + 1);
+        } else {
+            setOpenWindows(prev => prev.map(w => w.id === id ? { ...w, state: 'minimized' } : w));
+        }
+    };
+    const handleWindowMaximize = (id) => setOpenWindows(prev => prev.map(w =>
+        w.id === id ? { ...w, state: w.state === 'maximized' ? 'normal' : 'maximized' } : w
+    ));
+    const handleWindowFocus = (id) => {
+        setNextZ(n => n + 1);
+        setOpenWindows(prev => prev.map(w => w.id === id ? { ...w, zOrder: nextZ } : w));
+    };
+    const handleWindowMove = (id, x, y) => setOpenWindows(prev => prev.map(w => w.id === id ? { ...w, x, y } : w));
+    const handleWindowResize = (id, width, height) => setOpenWindows(prev => prev.map(w => w.id === id ? { ...w, width, height } : w));
 
     const handleDownload = (item) => {
         if (!item.url) return;
@@ -379,8 +420,16 @@ export default function DCET() {
                     </div>
                 )}
 
-                {/* In-page Document Viewer */}
-                {viewUrl && <IframeModal url={viewUrl} onClose={() => setViewUrl(null)} />}
+                {/* Multi-Window Resource Viewer */}
+                <ResourceWindowManager
+                    windows={openWindows}
+                    onClose={handleWindowClose}
+                    onMinimize={handleWindowMinimize}
+                    onMaximize={handleWindowMaximize}
+                    onFocus={handleWindowFocus}
+                    onMove={handleWindowMove}
+                    onResize={handleWindowResize}
+                />
             </div>
         </div>
     );
