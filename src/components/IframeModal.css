@@ -61,7 +61,8 @@
 
 .iframe-modal-body {
     flex: 1;
-    background: #ffffff; /* Keep white so PDF backgrounds etc match nicely */
+    background: #ffffff;
+    /* Keep white so PDF backgrounds etc match nicely */
     position: relative;
     width: 100%;
     height: 100%;
@@ -81,6 +82,7 @@
         opacity: 0;
         transform: translateY(30px) scale(0.98);
     }
+
     to {
         opacity: 1;
         transform: translateY(0) scale(1);
@@ -91,6 +93,7 @@
     .iframe-modal-overlay {
         padding: 0;
     }
+
     .iframe-modal-container {
         height: 100vh;
         border-radius: 0;
