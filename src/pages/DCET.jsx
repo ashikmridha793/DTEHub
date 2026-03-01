@@ -21,6 +21,8 @@ export default function DCET() {
     // Selection States
     const [selBranch, setSelBranch] = useState('');
     const [selSyllabus, setSelSyllabus] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState('newest');
 
     // Fetch master data for filters
     useEffect(() => {
@@ -118,21 +120,33 @@ export default function DCET() {
     };
 
     const handleSearch = (e) => {
-        if (e.key === 'Enter' && user) {
-            addSearchQuery(e.target.value);
+        const query = e.target.value;
+        setSearchQuery(query);
+        if (e.key === 'Enter' && user && query.trim()) {
+            addSearchQuery(query);
         }
     };
 
-    const filteredDcet = dcetData.filter(item => {
-        const matchesFolder = (currentFolder?.id || 'root') === (item.parentId || 'root');
-        
-        if (item.isFolder) return matchesFolder;
+    const filteredDcet = dcetData
+        .filter(item => {
+            const matchesFolder = (currentFolder?.id || 'root') === (item.parentId || 'root');
+            
+            const matchesSearch = !searchQuery || item.title.toLowerCase().includes(searchQuery.toLowerCase());
 
-        const matchesBranch = !selBranch || item.branch === selBranch || item.branch === 'Common';
-        const matchesSyllabus = !selSyllabus || item.syllabus === selSyllabus;
-        
-        return matchesFolder && matchesBranch && matchesSyllabus;
-    });
+            if (item.isFolder) return matchesFolder && matchesSearch;
+
+            const matchesBranch = !selBranch || item.branch === selBranch || item.branch === 'Common';
+            const matchesSyllabus = !selSyllabus || item.syllabus === selSyllabus;
+            
+            return matchesFolder && matchesBranch && matchesSyllabus && matchesSearch;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'newest') return b.id.localeCompare(a.id);
+            if (sortBy === 'oldest') return a.id.localeCompare(b.id);
+            if (sortBy === 'az') return a.title.localeCompare(b.title);
+            if (sortBy === 'za') return b.title.localeCompare(a.title);
+            return 0;
+        });
 
     return (
         <div className="container notes-page">
@@ -166,6 +180,22 @@ export default function DCET() {
                             icon={Filter}
                         />
                     </div>
+
+                    <div className="selector-item">
+                        <label>Sort By</label>
+                        <CustomSelect 
+                            options={[
+                                { value: 'newest', label: 'Newest First' },
+                                { value: 'oldest', label: 'Oldest First' },
+                                { value: 'az', label: 'Alphabetical (A-Z)' },
+                                { value: 'za', label: 'Alphabetical (Z-A)' }
+                            ]}
+                            value={sortBy}
+                            onChange={setSortBy}
+                            placeholder="Sort By"
+                            icon={ChevronDown}
+                        />
+                    </div>
                 </div>
 
                 <div className="search-bar-modern">
@@ -173,6 +203,8 @@ export default function DCET() {
                     <input
                         type="text"
                         placeholder="Search DCET materials..."
+                        value={searchQuery}
+                        onChange={handleSearch}
                         onKeyDown={handleSearch}
                     />
                 </div>

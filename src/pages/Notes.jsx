@@ -31,6 +31,8 @@ export default function Notes() {
     const [selBranch, setSelBranch] = useState(preferences?.branch || '');
     const [selSyllabus, setSelSyllabus] = useState(preferences?.syllabus || '');
     const [selSemester, setSelSemester] = useState(preferences?.semester || '');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState('newest');
 
     // Sync local state when preferences load
     useEffect(() => {
@@ -140,25 +142,39 @@ export default function Notes() {
     };
 
     const handleSearch = (e) => {
-        if (e.key === 'Enter' && user) {
-            addSearchQuery(e.target.value);
+        const query = e.target.value;
+        setSearchQuery(query);
+        if (e.key === 'Enter' && user && query.trim()) {
+            addSearchQuery(query);
         }
     };
 
-    const filteredNotes = notesData.filter(note => {
-        // Folder hierarchy check
-        const matchesFolder = (currentFolder?.id || 'root') === (note.parentId || 'root');
-        
-        // If it's a folder, we show it if it matches the current directory
-        if (note.isFolder) return matchesFolder;
+    const filteredNotes = notesData
+        .filter(note => {
+            // Folder hierarchy check
+            const matchesFolder = (currentFolder?.id || 'root') === (note.parentId || 'root');
+            
+            // Search filter
+            const matchesSearch = !searchQuery || 
+                note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                (note.chapter && note.chapter.toLowerCase().includes(searchQuery.toLowerCase()));
 
-        // Unified filters from workspace header
-        const matchesBranch = !selBranch || note.branch === selBranch || note.branch === 'Common';
-        const matchesSyllabus = !selSyllabus || note.syllabus === selSyllabus;
-        const matchesSemester = !selSemester || note.semester === selSemester;
-        
-        return matchesFolder && matchesBranch && matchesSyllabus && matchesSemester;
-    });
+            if (note.isFolder) return matchesFolder && matchesSearch;
+
+            // Unified filters from workspace header
+            const matchesBranch = !selBranch || note.branch === selBranch || note.branch === 'Common';
+            const matchesSyllabus = !selSyllabus || note.syllabus === selSyllabus;
+            const matchesSemester = !selSemester || note.semester === selSemester;
+            
+            return matchesFolder && matchesBranch && matchesSyllabus && matchesSemester && matchesSearch;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'newest') return b.id.localeCompare(a.id);
+            if (sortBy === 'oldest') return a.id.localeCompare(b.id);
+            if (sortBy === 'az') return a.title.localeCompare(b.title);
+            if (sortBy === 'za') return b.title.localeCompare(a.title);
+            return 0;
+        });
 
     return (
         <div className="container notes-page">
@@ -211,13 +227,31 @@ export default function Notes() {
                             icon={Filter}
                         />
                     </div>
+
+                    <div className="selector-item">
+                        <label>Sort By</label>
+                        <CustomSelect 
+                            options={[
+                                { value: 'newest', label: 'Newest First' },
+                                { value: 'oldest', label: 'Oldest First' },
+                                { value: 'az', label: 'Alphabetical (A-Z)' },
+                                { value: 'za', label: 'Alphabetical (Z-A)' }
+                            ]}
+                            value={sortBy}
+                            onChange={setSortBy}
+                            placeholder="Sort By"
+                            icon={ChevronDown}
+                        />
+                    </div>
                 </div>
 
                 <div className="search-bar-modern">
                     <Search className="search-icon" size={18} />
                     <input
                         type="text"
-                        placeholder="Quick search..."
+                        placeholder="Search resources by title or chapter..."
+                        value={searchQuery}
+                        onChange={handleSearch}
                         onKeyDown={handleSearch}
                     />
                 </div>
