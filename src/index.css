@@ -34,8 +34,8 @@
 .light-theme {
   --bg-color: #f8fafc;
   --card-bg: #ffffff;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
+  --text-main: #000000;
+  --text-muted: #334155;
 
   --border-color: rgba(0, 0, 0, 0.08);
   --accent-glow: rgba(253, 224, 71, 0.4);
@@ -111,16 +111,32 @@ button {
 }
 
 .card {
-  background-color: var(--card-bg);
-  border: 1px solid var(--border-color);
+  background: rgba(24, 24, 27, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
-  box-shadow: var(--shadow-sm);
-  transition: border-color 0.3s;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
 .card:hover {
   border-color: rgba(253, 224, 71, 0.2);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.25);
+}
+
+:root[data-theme='light'] .card {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme='light'] .card:hover {
+  border-color: rgba(253, 224, 71, 0.3);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.08);
 }
 
 .flex-center {

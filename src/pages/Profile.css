@@ -287,9 +287,17 @@
     border-radius: var(--radius-lg);
 }
 
-.text-red { color: #ef4444; }
-.text-yellow { color: #facc15; }
-.text-green { color: #22c55e; }
+.text-red {
+    color: #ef4444;
+}
+
+.text-yellow {
+    color: #facc15;
+}
+
+.text-green {
+    color: #22c55e;
+}
 
 /* Loader Animation */
 .loader {
@@ -304,8 +312,13 @@
 }
 
 @keyframes rotation {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 768px) {
@@ -324,7 +337,7 @@
         width: 80px;
         height: 80px;
     }
-    
+
     .profile-name-row {
         justify-content: center;
     }
@@ -340,7 +353,7 @@
     .profile-email {
         font-size: 0.95rem;
     }
-    
+
     .profile-input-row {
         flex-direction: column;
     }
@@ -366,6 +379,9 @@
         width: 34px;
         height: 34px;
     }
+}
+
+<<<<<< Updated upstream
 }
 
 /* ───────────── Premium Workspace Content (Profile Page) ───────────── */
@@ -511,16 +527,29 @@
     max-width: 200px;
 }
 
-.ws-icon-red { color: #f43f5e; }
-.ws-icon-yellow { color: #eab308; }
-.ws-icon-green { color: #22c55e; }
+.ws-icon-red {
+    color: #f43f5e;
+}
+
+.ws-icon-yellow {
+    color: #eab308;
+}
+
+.ws-icon-green {
+    color: #22c55e;
+}
 
 @media (max-width: 768px) {
     .workspace-grid-premium {
         grid-template-columns: 1fr;
     }
-    
+
     .ws-card-premium {
         padding: 1.25rem;
     }
 }
+
+=======
+}
+
+>>>>>>>Stashed changes
