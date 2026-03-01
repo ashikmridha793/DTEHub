@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, CheckCircle2, Info, Sparkles } from 'lucide-react';
+import { Calculator, CheckCircle2, Info } from 'lucide-react';
 import './DCETCalculator.css';
 
 const DCETCalculator = () => {
@@ -126,7 +126,6 @@ const DCETCalculator = () => {
                         ( {predictedRank} )
                     </div>
                     <div className="academy-wish">
-                        <Sparkles size={18} style={{ color: 'var(--accent-color)', marginRight: '0.5rem', marginBottom: '-3px' }} />
                         DTEHub Wishes All the best for your Results!
                     </div>
                     <p className="calculator-disclaimer">
