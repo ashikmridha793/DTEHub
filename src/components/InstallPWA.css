@@ -1,0 +1,103 @@
+.install-pwa-banner {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 3000;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.install-pwa-content {
+    background: #18181b;
+    border: 1px solid var(--accent-color);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    pointer-events: auto;
+    width: 100%;
+    max-width: 500px;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.install-pwa-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.install-icon {
+    color: var(--accent-color);
+}
+
+.install-pwa-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-install {
+    background: var(--accent-color);
+    color: black;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-install:hover {
+    filter: brightness(1.1);
+    transform: scale(1.05);
+}
+
+.btn-close-pwa {
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.btn-close-pwa:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Positioning for mobile above bottom nav */
+@media (max-width: 768px) {
+    .install-pwa-banner {
+        bottom: calc(4.5rem + 15px + env(safe-area-inset-bottom));
+        left: 10px;
+        right: 10px;
+    }
+
+    .install-pwa-info span {
+        font-size: 0.8rem;
+    }
+
+    .btn-install {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+}
