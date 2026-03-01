@@ -12,7 +12,9 @@
 }
 
 .onboarding-modal {
-    background: var(--card-bg);
+    background: rgba(24, 24, 27, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--accent-color);
     box-shadow: 0 25px 50px -12px rgba(253, 224, 71, 0.25);
     border-radius: var(--radius-lg);
@@ -78,7 +80,7 @@
     gap: 1.25rem;
 }
 
-.input-group input, 
+.input-group input,
 .input-group select {
     width: 100%;
     background: rgba(255, 255, 255, 0.03);
@@ -133,22 +135,54 @@
 }
 
 @keyframes fadeInModal {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes slideUpModal {
-    from { opacity: 0; transform: translateY(30px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 @media (max-width: 768px) {
     .onboarding-modal {
         padding: 2rem 1.5rem;
     }
-    
+
     .input-group-row {
         grid-template-columns: 1fr;
         gap: 1.25rem;
     }
+}
+
+/* ───────────── Light Theme ───────────── */
+:root[data-theme='light'] .onboarding-modal {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--accent-color);
+}
+
+:root[data-theme='light'] .input-group input,
+:root[data-theme='light'] .input-group select {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: #000;
+}
+
+:root[data-theme='light'] .input-group input:focus,
+:root[data-theme='light'] .input-group select:focus {
+    background: rgba(0, 0, 0, 0.05);
 }

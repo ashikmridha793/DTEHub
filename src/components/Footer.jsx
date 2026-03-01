@@ -18,9 +18,9 @@ export default function Footer() {
                         <Link to="/privacy" className="footer-link">Privacy Policy</Link>
                     </div>
                     <center>
-                        <div className="footer-copyright">
-                            DTEHub.
-                        </div>
+                        <Link to="/" className="logo-link">
+                            <span>DTE<span style={{ color: 'var(--accent-color)' }}>Hub</span></span>
+                        </Link>
                     </center>
                 </div>
             </footer>

@@ -2,7 +2,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    color: white;
+    color: var(--text-main);
     position: relative;
 }
 
@@ -73,7 +73,7 @@
     font-size: 5rem;
     font-weight: 900;
     letter-spacing: -0.04em;
-    color: white;
+    color: var(--text-main);
     line-height: 1.1;
     margin: 0;
     display: flex;
@@ -86,7 +86,7 @@
 .welcome-text,
 .dte-text {
     font-weight: 800;
-    color: white;
+    color: var(--text-main);
 }
 
 html[data-theme='light'] .welcome-text {
@@ -262,4 +262,18 @@ html[data-theme='light'] .dte-text {
     .stat-divider {
         height: 30px;
     }
+}
+
+/* ───────────── Light Theme Overrides ───────────── */
+:root[data-theme='light'] .home-stats-bar {
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme='light'] .stat-divider {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme='light'] .btn-explore:hover {
+    background: #000;
+    color: #fff;
 }

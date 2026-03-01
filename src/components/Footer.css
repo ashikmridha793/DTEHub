@@ -14,7 +14,9 @@
 }
 
 .footer-modal {
-    background: var(--card-bg);
+    background: rgba(24, 24, 27, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     width: 90%;
@@ -115,4 +117,17 @@ html[data-theme='light'] .contact-icon-wrapper {
         opacity: 1;
         transform: translateY(0) scale(1);
     }
+}
+
+/* ───────────── Light Theme ───────────── */
+:root[data-theme='light'] .footer-modal {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme='light'] .contact-link-item {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.06);
 }
