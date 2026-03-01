@@ -8,6 +8,8 @@ import Eye from 'lucide-react/dist/esm/icons/eye';
 import Plus from 'lucide-react/dist/esm/icons/plus';
 import Heart from 'lucide-react/dist/esm/icons/heart';
 import FilterX from 'lucide-react/dist/esm/icons/filter-x';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import Filter from 'lucide-react/dist/esm/icons/filter';
 import { useAuthContext } from '../context/AuthContext';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../firebase';
@@ -15,31 +17,45 @@ import IframeModal from '../components/IframeModal';
 import './Notes.css';
 
 export default function Notes() {
-    const { user, addRecentlyViewed, addDownload, toggleFavorite, isFavorited, addSearchQuery } = useAuthContext();
-    const [userYear, setUserYear] = useState('');
-    const [userBranch, setUserBranch] = useState('');
+    const { user, addRecentlyViewed, addDownload, toggleFavorite, isFavorited, addSearchQuery, preferences, updatePreferences } = useAuthContext();
     const [notesData, setNotesData] = useState([]);
     const [loadingNotes, setLoadingNotes] = useState(true);
     const [viewUrl, setViewUrl] = useState(null);
-    const [currentFolder, setCurrentFolder] = useState(null); // null means root
+    const [currentFolder, setCurrentFolder] = useState(null);
 
-    // Fetch User Profile
+    // Dynamic Filter Lists
+    const [branches, setBranches] = useState([]);
+    const [syllabuses, setSyllabuses] = useState([]);
+
+    // Selection States (initialized from preferences if available)
+    const [selBranch, setSelBranch] = useState(preferences?.branch || '');
+    const [selSyllabus, setSelSyllabus] = useState(preferences?.syllabus || '');
+    const [selSemester, setSelSemester] = useState(preferences?.semester || '');
+
+    // Sync local state when preferences load
     useEffect(() => {
-        if (user?.uid) {
-            const profileRef = ref(database, `users/${user.uid}/profile`);
-            const unsubscribe = onValue(profileRef, (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    if (data.year) setUserYear(data.year);
-                    if (data.branch) setUserBranch(data.branch);
-                }
-            });
-            return () => unsubscribe();
-        } else {
-            setUserYear('');
-            setUserBranch('');
+        if (preferences) {
+            if (preferences.branch) setSelBranch(preferences.branch);
+            if (preferences.syllabus) setSelSyllabus(preferences.syllabus);
+            if (preferences.semester) setSelSemester(preferences.semester);
         }
-    }, [user]);
+    }, [preferences]);
+
+    // Fetch master data for filters
+    useEffect(() => {
+        const bRef = ref(database, 'branches');
+        const sRef = ref(database, 'syllabuses');
+        
+        onValue(bRef, (snap) => {
+            const data = snap.val();
+            if (data) setBranches(Object.entries(data).map(([id, val]) => ({ id, ...val })));
+        });
+
+        onValue(sRef, (snap) => {
+            const data = snap.val();
+            if (data) setSyllabuses(Object.entries(data).map(([id, val]) => ({ id, ...val })));
+        });
+    }, []);
 
     // Fetch Notes from Database
     useEffect(() => {
@@ -101,14 +117,13 @@ export default function Notes() {
         window.open(downloadLink, '_blank');
     };
 
-    const handleFavorite = (note) => {
+    const handlePreferenceChange = (type, value) => {
+        if (type === 'branch') setSelBranch(value);
+        if (type === 'syllabus') setSelSyllabus(value);
+        if (type === 'semester') setSelSemester(value);
+
         if (user) {
-            toggleFavorite({
-                itemId: note.id,
-                type: 'note',
-                title: note.title,
-                chapter: note.chapter,
-            });
+            updatePreferences({ [type]: value });
         }
     };
 
@@ -118,37 +133,73 @@ export default function Notes() {
         }
     };
 
-    // Filter notes based on user year. If not logged in or no year selected, show all notes or prompt them.
-    // Let's show all notes if no userYear, but prioritize if there is one.
     const filteredNotes = notesData.filter(note => {
         // Folder hierarchy check
         const matchesFolder = (currentFolder?.id || 'root') === (note.parentId || 'root');
         
-        // If not deeply nested, apply year/branch filters
-        // If it's a folder, we might want to show it more broadly or strictly. 
-        // For now, let's show resources that match year OR are common.
-        const matchesYear = !userYear || userYear === 'Alumni' || note.academicYear === userYear || note.academicYear === 'Common' || !note.academicYear;
-        const matchesBranch = !userBranch || note.branch === userBranch || note.branch === 'Common' || !note.branch;
+        // If it's a folder, we show it if it matches the current directory
+        if (note.isFolder) return matchesFolder;
+
+        // Unified filters from workspace header
+        const matchesBranch = !selBranch || note.branch === selBranch || note.branch === 'Common';
+        const matchesSyllabus = !selSyllabus || note.syllabus === selSyllabus;
+        const matchesSemester = !selSemester || note.semester === selSemester;
         
-        return matchesFolder && matchesYear && matchesBranch;
+        return matchesFolder && matchesBranch && matchesSyllabus && matchesSemester;
     });
 
     return (
         <div className="container notes-page">
-            <div className="page-header flex-between">
-                <div>
-                    <h1 className="page-title">Notes & Question Papers</h1>
-                    <p className="page-subtitle">
-                        {userYear && userYear !== 'Alumni' 
-                            ? `Showing filtered notes and papers for your academic year (${userYear})` 
-                            : 'Your one-stop destination for all college resources'}
-                    </p>
+            <div className="workspace-selectors">
+                <div className="selector-group">
+                    <div className="selector-item">
+                        <label>Academic Branch</label>
+                        <div className="selector-box">
+                            <Filter size={14} className="selector-icon" />
+                            <select value={selBranch} onChange={e => handlePreferenceChange('branch', e.target.value)}>
+                                <option value="">Select Branch</option>
+                                <option value="Common">Common to All</option>
+                                {branches.map(b => <option key={b.id} value={b.title}>{b.title}</option>)}
+                            </select>
+                            <ChevronDown size={14} className="chevron-icon" />
+                        </div>
+                    </div>
+
+                    <div className="selector-item">
+                        <label>Syllabus Scheme</label>
+                        <div className="selector-box">
+                            <Filter size={14} className="selector-icon" />
+                            <select value={selSyllabus} onChange={e => handlePreferenceChange('syllabus', e.target.value)}>
+                                <option value="">Select Scheme</option>
+                                {syllabuses.map(s => <option key={s.id} value={s.title}>{s.title} Scheme</option>)}
+                            </select>
+                            <ChevronDown size={14} className="chevron-icon" />
+                        </div>
+                    </div>
+
+                    <div className="selector-item">
+                        <label>Target Semester</label>
+                        <div className="selector-box">
+                            <Filter size={14} className="selector-icon" />
+                            <select value={selSemester} onChange={e => handlePreferenceChange('semester', e.target.value)}>
+                                <option value="">Select Sem</option>
+                                <option value="1st Sem">1st Semester</option>
+                                <option value="2nd Sem">2nd Semester</option>
+                                <option value="3rd Sem">3rd Semester</option>
+                                <option value="4th Sem">4th Semester</option>
+                                <option value="5th Sem">5th Semester</option>
+                                <option value="6th Sem">6th Semester</option>
+                            </select>
+                            <ChevronDown size={14} className="chevron-icon" />
+                        </div>
+                    </div>
                 </div>
+
                 <div className="search-bar-modern">
                     <Search className="search-icon" size={18} />
                     <input
                         type="text"
-                        placeholder="Search files..."
+                        placeholder="Quick search..."
                         onKeyDown={handleSearch}
                     />
                 </div>
@@ -192,7 +243,7 @@ export default function Notes() {
                                 {!note.isFolder && (
                                     <div className="res-card-meta" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.2rem' }}>
                                         <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: '500' }}>
-                                            {note.academicYear} • {note.branch}
+                                            {note.syllabus || note.academicYear} • {note.semester} • {note.branch}
                                         </span>
                                     </div>
                                 )}
@@ -238,8 +289,8 @@ export default function Notes() {
             ) : (
                 <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-muted)' }}>
                     <FilterX size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
-                    <h3>No resources found for {userYear}</h3>
-                    <p>We're continually adding new notes and papers. Check back later!</p>
+                    <h3>No resources found</h3>
+                    <p>Try adjusting your branch or syllabus filters above.</p>
                 </div>
             )}
 

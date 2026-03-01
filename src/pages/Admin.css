@@ -1699,3 +1699,30 @@
     background: rgba(255, 255, 255, 0.1) !important;
     color: #fff !important;
 }
+
+/* Absolute Clickability Fix for Folder Actions */
+.folder-actions-overlay {
+    z-index: 50 !important;
+    pointer-events: auto !important;
+}
+
+.mini-action-btn {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    position: relative;
+    z-index: 51 !important;
+}
+
+.mini-action-btn:active {
+    transform: scale(0.9);
+}
+
+.mini-action-btn svg {
+    pointer-events: none; /* Let the button catch all raw clicks */
+}
+
+/* Ensure Parent Folder Card doesn't highjack events from high-index buttons */
+.folder-card-premium {
+    position: relative;
+    z-index: 1;
+}
