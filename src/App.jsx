@@ -11,6 +11,8 @@ import DCET from './pages/DCET';
 import Contribute from './pages/Contribute';
 import Admin from './pages/Admin';
 import PrivacyPolicy from './pages/Legal';
+import Papers from './pages/Papers';
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css';
 
 function App() {
@@ -28,10 +30,11 @@ function App() {
           <main className="main-content">
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/notes" element={<Notes />} />
-              <Route path="/dcet" element={<DCET />} />
+              <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+              <Route path="/papers" element={<ProtectedRoute><Papers /></ProtectedRoute>} />
+              <Route path="/dcet" element={<ProtectedRoute><DCET /></ProtectedRoute>} />
               <Route path="/contribute" element={<Contribute />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
             </Routes>

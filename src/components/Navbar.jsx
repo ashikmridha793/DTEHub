@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { GraduationCap, LogOut, Home, FileText, ScrollText, Zap, Heart, Github, Star } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import '../App.css';
@@ -7,6 +7,7 @@ import '../App.css';
 export default function Navbar() {
     const location = useLocation();
     const { user, loading, loginWithGoogle, logout } = useAuthContext();
+    const navigate = useNavigate();
     const [repoStars, setRepoStars] = useState(null);
 
     useEffect(() => {
@@ -21,6 +22,8 @@ export default function Navbar() {
     }, []);
 
     const isActive = (path) => location.pathname === path ? 'active' : '';
+
+
 
     return (
         <>
@@ -99,7 +102,7 @@ export default function Navbar() {
                 </Link>
                 <Link to="/notes" className={`mobile-nav-item ${isActive('/notes')}`}>
                     <FileText size={20} />
-                    <span>Notes & Papers</span>
+                    <span>Resources</span>
                 </Link>
                 <Link to="/dcet" className={`mobile-nav-item ${isActive('/dcet')}`}>
                     <Zap size={20} />

@@ -13,7 +13,7 @@ import Filter from 'lucide-react/dist/esm/icons/filter';
 import { useAuthContext } from '../context/AuthContext';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../firebase';
-import IframeModal from '../components/IframeModal';
+import CustomSelect from '../components/CustomSelect';
 import './Notes.css';
 
 export default function Notes() {
@@ -31,6 +31,8 @@ export default function Notes() {
     const [selBranch, setSelBranch] = useState(preferences?.branch || '');
     const [selSyllabus, setSelSyllabus] = useState(preferences?.syllabus || '');
     const [selSemester, setSelSemester] = useState(preferences?.semester || '');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState('newest');
 
     // Sync local state when preferences load
     useEffect(() => {
@@ -48,12 +50,24 @@ export default function Notes() {
         
         onValue(bRef, (snap) => {
             const data = snap.val();
-            if (data) setBranches(Object.entries(data).map(([id, val]) => ({ id, ...val })));
+            if (data) {
+                const arr = Object.keys(data).map(key => ({
+                    id: key,
+                    title: typeof data[key] === 'string' ? data[key] : data[key].title
+                }));
+                setBranches(arr);
+            }
         });
 
         onValue(sRef, (snap) => {
             const data = snap.val();
-            if (data) setSyllabuses(Object.entries(data).map(([id, val]) => ({ id, ...val })));
+            if (data) {
+                const arr = Object.keys(data).map(key => ({
+                    id: key,
+                    title: typeof data[key] === 'string' ? data[key] : data[key].title
+                }));
+                setSyllabuses(arr);
+            }
         });
     }, []);
 
@@ -128,25 +142,39 @@ export default function Notes() {
     };
 
     const handleSearch = (e) => {
-        if (e.key === 'Enter' && user) {
-            addSearchQuery(e.target.value);
+        const query = e.target.value;
+        setSearchQuery(query);
+        if (e.key === 'Enter' && user && query.trim()) {
+            addSearchQuery(query);
         }
     };
 
-    const filteredNotes = notesData.filter(note => {
-        // Folder hierarchy check
-        const matchesFolder = (currentFolder?.id || 'root') === (note.parentId || 'root');
-        
-        // If it's a folder, we show it if it matches the current directory
-        if (note.isFolder) return matchesFolder;
+    const filteredNotes = notesData
+        .filter(note => {
+            // Folder hierarchy check
+            const matchesFolder = (currentFolder?.id || 'root') === (note.parentId || 'root');
+            
+            // Search filter
+            const matchesSearch = !searchQuery || 
+                note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                (note.chapter && note.chapter.toLowerCase().includes(searchQuery.toLowerCase()));
 
-        // Unified filters from workspace header
-        const matchesBranch = !selBranch || note.branch === selBranch || note.branch === 'Common';
-        const matchesSyllabus = !selSyllabus || note.syllabus === selSyllabus;
-        const matchesSemester = !selSemester || note.semester === selSemester;
-        
-        return matchesFolder && matchesBranch && matchesSyllabus && matchesSemester;
-    });
+            if (note.isFolder) return matchesFolder && matchesSearch;
+
+            // Unified filters from workspace header
+            const matchesBranch = !selBranch || note.branch === selBranch || note.branch === 'Common';
+            const matchesSyllabus = !selSyllabus || note.syllabus === selSyllabus;
+            const matchesSemester = !selSemester || note.semester === selSemester;
+            
+            return matchesFolder && matchesBranch && matchesSyllabus && matchesSemester && matchesSearch;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'newest') return b.id.localeCompare(a.id);
+            if (sortBy === 'oldest') return a.id.localeCompare(b.id);
+            if (sortBy === 'az') return a.title.localeCompare(b.title);
+            if (sortBy === 'za') return b.title.localeCompare(a.title);
+            return 0;
+        });
 
     return (
         <div className="container notes-page">
@@ -154,44 +182,66 @@ export default function Notes() {
                 <div className="selector-group">
                     <div className="selector-item">
                         <label>Academic Branch</label>
-                        <div className="selector-box">
-                            <Filter size={14} className="selector-icon" />
-                            <select value={selBranch} onChange={e => handlePreferenceChange('branch', e.target.value)}>
-                                <option value="">Select Branch</option>
-                                <option value="Common">Common to All</option>
-                                {branches.map(b => <option key={b.id} value={b.title}>{b.title}</option>)}
-                            </select>
-                            <ChevronDown size={14} className="chevron-icon" />
-                        </div>
+                        <CustomSelect 
+                            options={[
+                                { value: '', label: 'Select Branch' },
+                                { value: 'Common', label: 'Common to All' },
+                                ...branches.map(b => ({ value: b.title, label: b.title }))
+                            ]}
+                            value={selBranch}
+                            onChange={val => handlePreferenceChange('branch', val)}
+                            placeholder="Select Branch"
+                            icon={Filter}
+                        />
                     </div>
 
                     <div className="selector-item">
                         <label>Syllabus Scheme</label>
-                        <div className="selector-box">
-                            <Filter size={14} className="selector-icon" />
-                            <select value={selSyllabus} onChange={e => handlePreferenceChange('syllabus', e.target.value)}>
-                                <option value="">Select Scheme</option>
-                                {syllabuses.map(s => <option key={s.id} value={s.title}>{s.title} Scheme</option>)}
-                            </select>
-                            <ChevronDown size={14} className="chevron-icon" />
-                        </div>
+                        <CustomSelect 
+                            options={[
+                                { value: '', label: 'Select Scheme' },
+                                ...syllabuses.map(s => ({ value: s.title, label: `${s.title} Scheme` }))
+                            ]}
+                            value={selSyllabus}
+                            onChange={val => handlePreferenceChange('syllabus', val)}
+                            placeholder="Select Scheme"
+                            icon={Filter}
+                        />
                     </div>
 
                     <div className="selector-item">
                         <label>Target Semester</label>
-                        <div className="selector-box">
-                            <Filter size={14} className="selector-icon" />
-                            <select value={selSemester} onChange={e => handlePreferenceChange('semester', e.target.value)}>
-                                <option value="">Select Sem</option>
-                                <option value="1st Sem">1st Semester</option>
-                                <option value="2nd Sem">2nd Semester</option>
-                                <option value="3rd Sem">3rd Semester</option>
-                                <option value="4th Sem">4th Semester</option>
-                                <option value="5th Sem">5th Semester</option>
-                                <option value="6th Sem">6th Semester</option>
-                            </select>
-                            <ChevronDown size={14} className="chevron-icon" />
-                        </div>
+                        <CustomSelect 
+                            options={[
+                                { value: '', label: 'Select Sem' },
+                                { value: '1st Sem', label: '1st Semester' },
+                                { value: '2nd Sem', label: '2nd Semester' },
+                                { value: '3rd Sem', label: '3rd Semester' },
+                                { value: '4th Sem', label: '4th Semester' },
+                                { value: '5th Sem', label: '5th Semester' },
+                                { value: '6th Sem', label: '6th Semester' }
+                            ]}
+                            value={selSemester}
+                            onChange={val => handlePreferenceChange('semester', val)}
+                            placeholder="Select Sem"
+                            icon={Filter}
+                        />
+                    </div>
+
+                    <div className="selector-item">
+                        <label>Sort By</label>
+                        <CustomSelect 
+                            options={[
+                                { value: 'newest', label: 'Newest First' },
+                                { value: 'oldest', label: 'Oldest First' },
+                                { value: 'az', label: 'Alphabetical (A-Z)' },
+                                { value: 'za', label: 'Alphabetical (Z-A)' }
+                            ]}
+                            value={sortBy}
+                            onChange={setSortBy}
+                            placeholder="Sort By"
+                            icon={ChevronDown}
+                        />
                     </div>
                 </div>
 
@@ -199,7 +249,9 @@ export default function Notes() {
                     <Search className="search-icon" size={18} />
                     <input
                         type="text"
-                        placeholder="Quick search..."
+                        placeholder="Search resources by title or chapter..."
+                        value={searchQuery}
+                        onChange={handleSearch}
                         onKeyDown={handleSearch}
                     />
                 </div>

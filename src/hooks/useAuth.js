@@ -9,37 +9,47 @@ export function useAuth() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        
-        // Update user profile in Realtime Database - this creates the record
-        // which we then count to show the Verified Users stat.
-        const userRef = ref(database, `users/${firebaseUser.uid}`);
-        const snapshot = await get(userRef);
-        const existingData = snapshot.val() || {};
-        
-        // If it's a new user, increment the global verified users counter
-        if (!existingData.createdAt) {
-          const statsRef = ref(database, 'stats/totalVerifiedUsers');
-          runTransaction(statsRef, (count) => {
-            return (count || 0) + 1;
-          }).catch(err => console.error('Error incrementing user count:', err));
-        }
+      try {
+        if (firebaseUser) {
+          // Set user immediately so protected routes work right away
+          setUser(firebaseUser);
 
-        await set(userRef, {
-          ...existingData,
-          uid: firebaseUser.uid,
-          displayName: firebaseUser.displayName,
-          email: firebaseUser.email,
-          photoURL: firebaseUser.photoURL,
-          emailVerified: firebaseUser.emailVerified || false, // from Google profile
-          lastLoginAt: serverTimestamp(),
-          ...(existingData.createdAt ? {} : { createdAt: serverTimestamp() }),
-        });
-      } else {
-        setUser(null);
+          // Update user profile in Realtime Database in the background
+          // These operations should NOT block auth state resolution
+          try {
+            const userRef = ref(database, `users/${firebaseUser.uid}`);
+            const snapshot = await get(userRef);
+            const existingData = snapshot.val() || {};
+
+            // If it's a new user, increment the global verified users counter
+            if (!existingData.createdAt) {
+              const statsRef = ref(database, 'stats/totalVerifiedUsers');
+              runTransaction(statsRef, (count) => {
+                return (count || 0) + 1;
+              }).catch(err => console.error('Error incrementing user count:', err));
+            }
+
+            await set(userRef, {
+              ...existingData,
+              uid: firebaseUser.uid,
+              displayName: firebaseUser.displayName,
+              email: firebaseUser.email,
+              photoURL: firebaseUser.photoURL,
+              emailVerified: firebaseUser.emailVerified || false,
+              lastLoginAt: serverTimestamp(),
+              ...(existingData.createdAt ? {} : { createdAt: serverTimestamp() }),
+            });
+          } catch (dbError) {
+            // Database write errors should NOT block user from accessing the app
+            console.error('Error updating user profile in DB:', dbError);
+          }
+        } else {
+          setUser(null);
+        }
+      } finally {
+        // Always mark loading as done, even if DB operations fail
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();

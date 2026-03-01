@@ -3,7 +3,8 @@ import { Search, Download, Folder, FileText, Eye, Plus, Heart, FilterX } from 'l
 import { useAuthContext } from '../context/AuthContext';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../firebase';
-import IframeModal from '../components/IframeModal';
+import CustomSelect from '../components/CustomSelect';
+import { Filter, ChevronDown } from 'lucide-react';
 import './Notes.css';
 
 export default function DCET() {
@@ -11,7 +12,45 @@ export default function DCET() {
     const [dcetData, setDcetData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [viewUrl, setViewUrl] = useState(null);
-    const [currentFolder, setCurrentFolder] = useState(null); // null means root
+    const [currentFolder, setCurrentFolder] = useState(null);
+
+    // Dynamic Filter Lists
+    const [branches, setBranches] = useState([]);
+    const [syllabuses, setSyllabuses] = useState([]);
+
+    // Selection States
+    const [selBranch, setSelBranch] = useState('');
+    const [selSyllabus, setSelSyllabus] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState('newest');
+
+    // Fetch master data for filters
+    useEffect(() => {
+        const bRef = ref(database, 'branches');
+        const sRef = ref(database, 'syllabuses');
+        
+        onValue(bRef, (snap) => {
+            const data = snap.val();
+            if (data) {
+                const arr = Object.keys(data).map(key => ({
+                    id: key,
+                    title: typeof data[key] === 'string' ? data[key] : data[key].title
+                }));
+                setBranches(arr);
+            }
+        });
+
+        onValue(sRef, (snap) => {
+            const data = snap.val();
+            if (data) {
+                const arr = Object.keys(data).map(key => ({
+                    id: key,
+                    title: typeof data[key] === 'string' ? data[key] : data[key].title
+                }));
+                setSyllabuses(arr);
+            }
+        });
+    }, []);
 
     // Fetch DCET Resources from Database
     useEffect(() => {
@@ -81,28 +120,91 @@ export default function DCET() {
     };
 
     const handleSearch = (e) => {
-        if (e.key === 'Enter' && user) {
-            addSearchQuery(e.target.value);
+        const query = e.target.value;
+        setSearchQuery(query);
+        if (e.key === 'Enter' && user && query.trim()) {
+            addSearchQuery(query);
         }
     };
 
-    const filteredDcet = dcetData.filter(item => {
-        const matchesFolder = (currentFolder?.id || 'root') === (item.parentId || 'root');
-        return matchesFolder;
-    });
+    const filteredDcet = dcetData
+        .filter(item => {
+            const matchesFolder = (currentFolder?.id || 'root') === (item.parentId || 'root');
+            
+            const matchesSearch = !searchQuery || item.title.toLowerCase().includes(searchQuery.toLowerCase());
+
+            if (item.isFolder) return matchesFolder && matchesSearch;
+
+            const matchesBranch = !selBranch || item.branch === selBranch || item.branch === 'Common';
+            const matchesSyllabus = !selSyllabus || item.syllabus === selSyllabus;
+            
+            return matchesFolder && matchesBranch && matchesSyllabus && matchesSearch;
+        })
+        .sort((a, b) => {
+            if (sortBy === 'newest') return b.id.localeCompare(a.id);
+            if (sortBy === 'oldest') return a.id.localeCompare(b.id);
+            if (sortBy === 'az') return a.title.localeCompare(b.title);
+            if (sortBy === 'za') return b.title.localeCompare(a.title);
+            return 0;
+        });
 
     return (
         <div className="container notes-page">
-            <div className="page-header flex-between">
-                <div>
-                    <h1 className="page-title">DCET Preparation</h1>
-                    <p className="page-subtitle">Diploma Common Entrance Test resources and materials.</p>
+            <div className="workspace-selectors">
+                <div className="selector-group">
+                    <div className="selector-item">
+                        <label>Academic Branch</label>
+                        <CustomSelect 
+                            options={[
+                                { value: '', label: 'Select Branch' },
+                                { value: 'Common', label: 'Common to All' },
+                                ...branches.map(b => ({ value: b.title, label: b.title }))
+                            ]}
+                            value={selBranch}
+                            onChange={setSelBranch}
+                            placeholder="Select Branch"
+                            icon={Filter}
+                        />
+                    </div>
+
+                    <div className="selector-item">
+                        <label>Syllabus Scheme</label>
+                        <CustomSelect 
+                            options={[
+                                { value: '', label: 'Select Scheme' },
+                                ...syllabuses.map(s => ({ value: s.title, label: `${s.title} Scheme` }))
+                            ]}
+                            value={selSyllabus}
+                            onChange={setSelSyllabus}
+                            placeholder="Select Scheme"
+                            icon={Filter}
+                        />
+                    </div>
+
+                    <div className="selector-item">
+                        <label>Sort By</label>
+                        <CustomSelect 
+                            options={[
+                                { value: 'newest', label: 'Newest First' },
+                                { value: 'oldest', label: 'Oldest First' },
+                                { value: 'az', label: 'Alphabetical (A-Z)' },
+                                { value: 'za', label: 'Alphabetical (Z-A)' }
+                            ]}
+                            value={sortBy}
+                            onChange={setSortBy}
+                            placeholder="Sort By"
+                            icon={ChevronDown}
+                        />
+                    </div>
                 </div>
+
                 <div className="search-bar-modern">
                     <Search className="search-icon" size={18} />
                     <input
                         type="text"
                         placeholder="Search DCET materials..."
+                        value={searchQuery}
+                        onChange={handleSearch}
                         onKeyDown={handleSearch}
                     />
                 </div>

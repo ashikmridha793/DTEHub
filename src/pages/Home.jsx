@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, GraduationCap } from 'lucide-react';
 import { useFirebaseStats } from '../hooks/useFirebaseStats';
+import { useAuthContext } from '../context/AuthContext';
 import './Home.css';
 
 // Simple Counter Component for the Stats
@@ -49,6 +50,7 @@ const AnimatedCounter = ({ value, label }) => {
 
 export default function Home() {
     const navigate = useNavigate();
+    const { user, loginWithGoogle } = useAuthContext();
     const { stats, loading } = useFirebaseStats();
 
     return (
@@ -66,7 +68,10 @@ export default function Home() {
                         The ultimate study hub for Diploma students. Access premium notes, past question papers, and DCET Question papers from trusted academic resources—all centralized for your success.
                     </p>
 
-                    <button className="btn-explore" onClick={() => navigate('/notes')}>
+                    <button 
+                        className="btn-explore" 
+                        onClick={() => navigate('/notes')}
+                    >
                         Explore All Resources <ArrowRight size={20} />
                     </button>
 
