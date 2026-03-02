@@ -19,7 +19,7 @@
 - **Modern UI/UX**: Premium aesthetic with glassmorphism, dynamic animations, and full dark/light mode support.
 
 ## Project Structure
-
+ 
 ```text
 src/
 ├── components/     # Reusable UI components (Navbar, Dock, Modals)
